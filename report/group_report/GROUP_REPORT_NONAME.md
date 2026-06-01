@@ -1,8 +1,14 @@
 ﻿# Báo Cáo Nhóm: Lab 3 - Hệ Thống Agentic Cấp Độ Production
 
-- **Team Name**: NoName
-- **Team Members**: Nguyễn Quốc Tiến, Nguyễn Thị Yến, Hoàng Ích Cao Sơn, Hoàng Long Vũ
-- **Deployment Date**: 01/06/2026
+- **Tên nhóm**: NoName
+
+- **Thành viên nhóm**:  
+  2A202600553 - Hoàng Ích Cao Sơn  
+  2A202600746 - Hoàng Long Vũ  
+  2A202600645 - Nguyễn Thị Yến  
+  2A202600551 - Nguyễn Quốc Tiến
+
+- **Ngày triển khai**: 2026-06-01
 
 ---
 
@@ -10,7 +16,7 @@
 
 Lab này so sánh chatbot LLM baseline trả lời trực tiếp với thiết kế travel agent theo kiểu ReAct cho các tác vụ tìm chuyến bay nội địa, kiểm tra điều kiện vé, kiểm tra số ghế, tính giá và tạo đặt chỗ. Chatbot baseline có thể tạo câu trả lời trôi chảy, nhưng không thể kiểm tra cơ sở dữ liệu chuyến bay được cung cấp hoặc tính tổng tiền dựa trên kết quả tool một cách đáng tin cậy. Kiến trúc ReAct agent giải quyết vấn đề này bằng cách ép các bước cần dữ liệu thực tế phải đi qua tool call có kiểm soát, sau đó đưa kết quả về lại cho LLM dưới dạng `Observation`.
 
-- **Tỉ lệ thành công của baseline**: 0/3 case baseline đã hoàn thành trong log có thể xem là đáng tin cậy hoàn toàn, vì câu trả lời được sinh ra mà không có quyền truy cập tool.
+- **Tình trạng chạy baseline**: Trong log mới nhất, 5/5 case baseline đã có đủ `CHATBOT_CASE_START` và `CHATBOT_CASE_END`. Độ đúng/sai của câu trả lời vẫn chưa thể chấm chính xác từ log vì hệ thống chưa lưu nội dung response, chỉ lưu latency và token.
 - **Trạng thái cài đặt Agent**: Các function tool và tool specification đã được cài đặt; vòng lặp ReAct trong `src/agent/agent.py` vẫn đang là skeleton và cần hoàn thiện trước khi chấm điểm cuối.
 - **Kết quả chính**: Project thể hiện khác biệt cốt lõi giữa chatbot và agent: chatbot dự đoán dựa trên xác suất ngôn ngữ, còn agent cần parse `Action`, gọi một Python function được phê duyệt, rồi trả lời dựa trên `Observation` trả về.
 
@@ -54,20 +60,22 @@ Class `ReActAgent` hiện tại đã có cấu trúc chính: constructor, hàm t
 
 ## 3. Telemetry Và Bảng Đánh Giá Hiệu Năng
 
-Telemetry được ghi dưới dạng JSON lines thông qua `src/telemetry/logger.py`. Log chạy ngày 2026-06-01 hiện có ba case baseline chatbot đã hoàn thành bằng Gemini.
+Telemetry được ghi dưới dạng JSON lines thông qua `src/telemetry/logger.py`. Log chạy ngày 2026-06-01 hiện có một lượt baseline chatbot hoàn chỉnh với 5 case bằng Gemini.
 
-- **Số case baseline đã log hoàn thành**: 3
-- **Độ trễ trung bình**: 6054 ms
-- **Độ trễ trung vị (P50)**: 6068 ms
-- **Độ trễ lớn nhất**: 7154 ms
-- **Số token trung bình mỗi task**: 1051 total tokens
-- **Tổng chi phí ước tính của các case đã log**: $0.03152 theo công thức mock trong `PerformanceTracker`
+- **Số case baseline đã log hoàn thành**: 5
+- **Độ trễ trung bình**: 6824 ms
+- **Độ trễ trung vị (P50)**: 5894 ms
+- **Độ trễ lớn nhất**: 10580 ms
+- **Số token trung bình mỗi task**: 1107 total tokens
+- **Tổng chi phí ước tính của lượt chạy mới nhất**: $0.05536 theo công thức mock trong `PerformanceTracker`
 
 | Case | Provider | Model | Độ Trễ | Tổng Token | Chi Phí Ước Tính |
 | :--- | :--- | :--- | ---: | ---: | ---: |
-| 1 | Gemini | `gemini-2.5-flash` | 7154 ms | 1307 | $0.01307 |
-| 2 | Gemini | `gemini-2.5-flash` | 6068 ms | 999 | $0.00999 |
-| 3 | Gemini | `gemini-2.5-flash` | 4940 ms | 846 | $0.00846 |
+| 1 | Gemini | `gemini-2.5-flash` | 10422 ms | 1358 | $0.01358 |
+| 2 | Gemini | `gemini-2.5-flash` | 10580 ms | 1879 | $0.01879 |
+| 3 | Gemini | `gemini-2.5-flash` | 4116 ms | 716 | $0.00716 |
+| 4 | Gemini | `gemini-2.5-flash` | 5894 ms | 1047 | $0.01047 |
+| 5 | Gemini | `gemini-2.5-flash` | 3110 ms | 536 | $0.00536 |
 
 Telemetry hiện tại hữu ích cho việc đo latency, token count và mock cost. Bước cải tiến tiếp theo nên thêm metric riêng cho agent: số vòng lặp, tên tool được gọi, latency của tool, số lỗi parser, số lần gọi tool không tồn tại và số lần dừng do vượt `max_steps`.
 
@@ -123,3 +131,5 @@ Telemetry hiện tại hữu ích cho việc đo latency, token count và mock c
 - **Observability**: Mở rộng telemetry với latency của tool, số vòng lặp, trạng thái cuối, loại lỗi parser và `flight_id` đã chọn.
 - **Reliability**: Thêm few-shot examples vào system prompt để model sinh tham số JSON đúng format nghiêm ngặt hơn.
 - **Scaling**: Với workflow lớn hơn, có thể chuyển từ manual loop sang graph-based orchestrator như LangGraph, tách riêng các node planning, tool execution, validation và final response.
+
+---
